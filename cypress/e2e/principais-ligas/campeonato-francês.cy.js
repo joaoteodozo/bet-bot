@@ -12,7 +12,22 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Francês', () => {
     ];
 
     beforeEach(() => {
-        cy.visit('https://www.espn.com.br/futebol/calendario/_/liga/fra.1', { timeout: 300000 });
+        cy.visit('https://www.espn.com.br/futebol/calendario/_/liga/fra.1', {timeout: 300000});
+        cy.get('button[aria-label="Calendário"]').click();
+        // Verifica se o botão "HOJE" está desabilitado
+        cy.get('.MonthContainer__ButtonContainer')
+            .find('.MonthContainer__button:contains("Hoje")')
+            .then(($hojeButton) => {
+                if ($hojeButton.hasClass('MonthContainer__button--disableToday')) {
+                    // Clica em "CANCELAR" se "HOJE" estiver desabilitado
+                    cy.contains('div', 'Cancelar').click();
+                    cy.log('Botão "HOJE" desabilitado, clicou em "CANCELAR".');
+                } else {
+                    // Clica em "HOJE" se estiver habilitado
+                    cy.wrap($hojeButton).click({ force: true });
+                    cy.log('Botão "HOJE" habilitado, clicou em "HOJE".');
+                }
+            });
     });
 
     it('Deve calcular a probabilidade de sair 2 ou mais gols em cada jogo', () => {
@@ -35,6 +50,7 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Francês', () => {
                 const time1 = $jogo.find('.Table__Team.away a').text().trim(); // Nome do primeiro time
                 const time2 = $jogo.find('.Table__Team:not(.away) a').text().trim(); // Nome do segundo time
                 const jogoLink = $jogo.find('.local a').attr('href'); // Link para a página do jogo
+                const horario = $jogo.find('.date__col a').text().trim(); // Obtém o horário do jogo
 
                 // Verifica se o jogo está "LIVE" ou "FT"
                 const isLive = $jogo.find('.Schedule__live').length > 0;
@@ -108,8 +124,9 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Francês', () => {
                             cy.log(`Probabilidade de sair 2 ou mais gols: ${probabilidade.toFixed(2)}%`);
 
                             const message = `
-<b>CAMPEONATO BRASILEIRO - SÉRIE A</b>                            
+<b>CAMPEONATO FRANCÊS</b>                            
 <b>Jogo:</b> ${time1} x ${time2}
+<b>Horário:</b> ${horario}
 
 <b>Média de Gols Marcados pelo <u>${time1}</u>:</b> ${mediaGolsMarcadosTime1.toFixed(2)}
 <b>Média de Gols Sofridos pelo <u>${time1}</u>:</b> ${mediaGolsSofridosTime1.toFixed(2)}
