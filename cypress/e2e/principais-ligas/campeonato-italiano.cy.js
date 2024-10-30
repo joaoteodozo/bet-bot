@@ -30,7 +30,7 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Italiano', () => {
             });
     });
 
-    it('Deve calcular a probabilidade de sair 2 ou mais gols em cada jogo', () => {
+    it('Deve calcular a probabilidade de sair 2 ou mais gols e 1 ou mais gols em cada jogo', () => {
         const diaAtual = dayjs().format('dddd, D [de] MMMM, YYYY'); // Formata a data para o português
 
         cy.contains(diaAtual).then(($dia) => {
@@ -109,11 +109,23 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Italiano', () => {
 
                             const mediaTotal = (mediaGolsMarcadosTime1 + mediaGolsSofridosTime1 + mediaGolsMarcadosTime2 + mediaGolsSofridosTime2) / 2;
 
-                            let probabilidade;
-                            if (mediaTotal >= 4) {
-                                probabilidade = 100;
-                            } else {
-                                probabilidade = (mediaTotal / 4) * 100;
+                            const calcularProbabilidade = (mediaTotal, tipo) => {
+                                if (tipo === '2+') {
+                                    return mediaTotal >= 4 ? 100 : (mediaTotal / 4) * 100;
+                                } else if (tipo === '1+') {
+                                    return mediaTotal >= 2 ? 100 : (mediaTotal / 2) * 100; // Exemplo para 1 ou mais gols
+                                }
+                            };
+
+                            let probabilidade2Mais = calcularProbabilidade(mediaTotal, '2+');
+                            let probabilidade1Mais = calcularProbabilidade(mediaTotal, '1+');
+
+                            // Se a probabilidade for 100%, substitui por um número aleatório entre 89 e 93
+                            if (probabilidade2Mais === 100) {
+                                probabilidade2Mais = Math.floor(Math.random() * (93 - 89 + 1)) + 89;
+                            }
+                            if (probabilidade1Mais === 100) {
+                                probabilidade1Mais = Math.floor(Math.random() * (93 - 89 + 1)) + 89;
                             }
 
                             cy.log(`Média de Gols Marcados pelo ${time1}: ${mediaGolsMarcadosTime1.toFixed(2)}`);
@@ -121,9 +133,10 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Italiano', () => {
                             cy.log(`Média de Gols Marcados pelo ${time2}: ${mediaGolsMarcadosTime2.toFixed(2)}`);
                             cy.log(`Média de Gols Sofridos pelo ${time2}: ${mediaGolsSofridosTime2.toFixed(2)}`);
                             cy.log(`Média Total: ${mediaTotal.toFixed(2)}`);
-                            cy.log(`Probabilidade de sair 2 ou mais gols: ${probabilidade.toFixed(2)}%`);
+                            cy.log(`Probabilidade de sair 2 ou mais gols: ${probabilidade2Mais.toFixed(2)}%`);
+                            cy.log(`Probabilidade de sair 1 ou mais gols: ${probabilidade1Mais.toFixed(2)}%`);
 
-                            const message = `
+                            const message2Mais = `
 <b>CAMPEONATO ITALIANO</b>                            
 <b>Jogo:</b> ${time1} x ${time2}
 <b>Horário:</b> ${horario}
@@ -132,19 +145,51 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Italiano', () => {
 <b>Média de Gols Sofridos pelo <u>${time1}</u>:</b> ${mediaGolsSofridosTime1.toFixed(2)}
 <b>Média de Gols Marcados pelo <u>${time2}</u>:</b> ${mediaGolsMarcadosTime2.toFixed(2)}
 <b>Média de Gols Sofridos pelo <u>${time2}</u>:</b> ${mediaGolsSofridosTime2.toFixed(2)}
-
 <b>Média Total:</b> ${mediaTotal.toFixed(2)}
-<b>Probabilidade de sair 2 ou mais gols:</b> <u>${probabilidade.toFixed(2)}%</u>
+
+<b>Probabilidade de sair + 1.5 gols:</b> <u>${probabilidade2Mais.toFixed(2)}%</u>
 `;
 
-                            if (probabilidade >= 60) {
+                            const message1Mais = `
+<b>CAMPEONATO ITALIANO</b>                            
+<b>Jogo:</b> ${time1} x ${time2}
+<b>Horário:</b> ${horario}
+
+<b>Média de Gols Marcados pelo <u>${time1}</u>:</b> ${mediaGolsMarcadosTime1.toFixed(2)}
+<b>Média de Gols Sofridos pelo <u>${time1}</u>:</b> ${mediaGolsSofridosTime1.toFixed(2)}
+<b>Média de Gols Marcados pelo <u>${time2}</u>:</b> ${mediaGolsMarcadosTime2.toFixed(2)}
+<b>Média de Gols Sofridos pelo <u>${time2}</u>:</b> ${mediaGolsSofridosTime2.toFixed(2)}
+<b>Média Total:</b> ${mediaTotal.toFixed(2)}
+
+<b>Probabilidade de sair + 0.5 gols:</b> <u>${probabilidade1Mais.toFixed(2)}%</u>
+`;
+
+                            if (probabilidade2Mais >= 60) {
                                 chatIds.forEach(id => {
                                     cy.request({
                                         method: 'POST',
                                         url: `https://api.telegram.org/bot${telegramToken}/sendMessage`,
                                         body: {
                                             chat_id: id,
-                                            text: message,
+                                            text: message2Mais,
+                                            parse_mode: 'HTML'
+                                        }
+                                    }).then((response) => {
+                                        if (response.status === 200) {
+                                            console.log(`Mensagem enviada para o chat ${id}`);
+                                        } else {
+                                            console.error(`Erro ao enviar mensagem para o chat ${id}:`, response);
+                                        }
+                                    });
+                                });
+                            } else if (probabilidade1Mais >= 80) {
+                                chatIds.forEach(id => {
+                                    cy.request({
+                                        method: 'POST',
+                                        url: `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+                                        body: {
+                                            chat_id: id,
+                                            text: message1Mais,
                                             parse_mode: 'HTML'
                                         }
                                     }).then((response) => {
@@ -156,12 +201,12 @@ describe('Cálculo de Probabilidade de Gols no Campeonato Italiano', () => {
                                     });
                                 });
                             } else {
-                                cy.log(`Probabilidade menor que 60% para o jogo ${time1} x ${time2}: ${probabilidade.toFixed(2)}%`);
+                                cy.log(`Probabilidades abaixo dos limites: 2+ ${probabilidade2Mais.toFixed(2)}%, 1+ ${probabilidade1Mais.toFixed(2)}%`);
                             }
                         });
                     });
                 });
             });
         });
-    });            
+    });
 });
