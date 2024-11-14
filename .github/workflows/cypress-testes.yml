@@ -1,0 +1,27 @@
+name: Cypress Test Run
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Isso vai rodar todos os dias à meia-noite UTC
+  workflow_dispatch:  # Para permitir que você execute manualmente o workflow também
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest  # Você pode escolher outro ambiente, se necessário
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'  # Você pode definir a versão do Node que está utilizando no projeto
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run Cypress tests
+      run: npx cypress run
+      env:
+        CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}  # Caso esteja usando o Cypress Dashboard (opcional)
