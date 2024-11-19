@@ -2,7 +2,7 @@ name: Cypress Test Run
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # Isso vai rodar todos os dias às 11h UTC
+    - cron: '0 0 * * *'  # Isso vai rodar todos os dias às 11h UTC
   workflow_dispatch:  # Para permitir que você execute manualmente o workflow também
 
 jobs:
